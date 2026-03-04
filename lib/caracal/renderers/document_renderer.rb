@@ -39,7 +39,7 @@ module Caracal
                 w.pgMar page_margin_options
 
                 # FIXME: dirty hack to let word create a blank header for the first page which is the cover
-                w.titlePg
+                # w.titlePg
               end
 
             end
