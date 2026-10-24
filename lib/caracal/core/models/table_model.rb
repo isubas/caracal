@@ -51,6 +51,7 @@ module Caracal
           @table_layout         = DEFAULT_TABLE_LAYOUT
           @table_look           = DEFAULT_TABLE_LOOK
           @table_border         = DEFAULT_TABLE_BORDER
+          @table_rows_cant_split = {}
 
           super options, &block
         end
@@ -133,6 +134,24 @@ module Caracal
 
 
         #=============== SETTERS ==============================
+
+        # alias of repeat_header
+        def header_rows(value)
+          repeat_header value
+        end
+
+        # This method marks one or more rows as rows that move to the top
+        # of the next page rather than split across a page break.
+        def cant_split(models, options={})
+          models = rows.include?(models) ? [models] : models
+          models.each do |r|
+            @table_rows_cant_split[rows.index(r)] = true
+          end
+        end
+
+        def cant_split?(row_index)
+          !!@table_rows_cant_split[row_index]
+        end
 
         # column widths
         def column_widths(value)
@@ -218,7 +237,7 @@ module Caracal
           k << [:data, :align, :width, :style, :layout, :caption, :indent]
           k << HasBackground::ATTRS
           k << HasBorders::ATTRS
-          k << [:column_widths]
+          k << [:column_widths, :header_rows]
           k << [:repeat_header, :row_band_size, :col_band_size]
           k.flatten
         end

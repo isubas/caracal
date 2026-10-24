@@ -14,7 +14,7 @@ Caracal is not a magical HTML to Word translator. Instead, it is a markup langua
 
 Or, said differently, if you use [Prawn](https://github.com/prawnpdf/prawn) for PDF generation, you'll probably like Caracal. Only you'll probably like it better. :)
 
-Please see the [caracal-example](https://github.com/trade-informatics/caracal-example) repository for
+Please see the [caracal-example](https://github.com/urvin-compliance/caracal-example) repository for
 a working demonstration of the library's capabilities.
 
 
@@ -210,6 +210,19 @@ All Caracal models perform basic validations on their attributes, but this is, w
 In forthcoming versions of Caracal, we'll be looking to expand the `InvalidModelError` class to provide broader error reporting abilities across the entire library.
 
 
+## Security
+
+Caracal reads whatever path or URL you hand it. Both `img` and `iframe` accept a local filesystem path or an http(s) URL, and Caracal reads or fetches it while the document renders.
+
+**Treat those values as trusted input.** If a path or URL can be influenced by an end user, validate it before passing it to Caracal:
+
+* **Local paths** are read with the permissions of your application's process. Any file that process can read can be embedded in the generated document, so `docx.img '/etc/passwd'` embeds the contents of that file.
+* **URLs** are fetched from your application's network position, and redirects are followed. A user-supplied URL can therefore reach internal services, `localhost`, or cloud metadata endpoints that are not otherwise reachable from outside.
+* **Documents embedded with `iframe`** are parsed, and their markup is copied into your output. Only embed documents you trust. See [IFrames](#iframes).
+
+Caracal deliberately does not restrict paths, hosts, or directories, because it cannot know what is legitimate for your application. That policy belongs in your code: an allowlist of permitted directories or hosts, or simply never passing user-supplied values through to Caracal.
+
+
 ## Installation
 
 Add this line to your application's Gemfile:
@@ -311,14 +324,20 @@ Page numbers can be added to the footer via the `page_numbers` method.  The meth
 docx.page_numbers true do
   align        :right  # sets the alignment. accepts :left, :center, and :right.
   label        'Page'  # sets the text that will go to the left of the page number. Defaults to nil.
-  size:        24      # sets the label and number size simultaneously. units in half points.
-  label_size:  24      # sets the label size only. units in half points.
-  number_size: 20      # sets the number size only. units in half points.
+  size         24      # sets the label and number size simultaneously. units in half points.
+  label_size   24      # sets the label size only. units in half points.
+  number_size  20      # sets the number size only. units in half points.
 end
 ```
 
 The `size` option and the `label_size` and `number_size` options are mutually exclusive.
 
+The `start` option sets the number of the first page, which is useful when the document continues another one, or has a cover page you don't want counted. It also applies to `field :page` in a custom footer, so it can be set without showing the built-in page number:
+
+```ruby
+docx.page_numbers true, start: 0   # the cover page is page 0, so the next page is page 1
+docx.page_numbers start: 12        # number from 12 without the built-in page number
+```
 
 ### Fonts
 
@@ -436,6 +455,16 @@ docx.p do
 end
 ```
 
+Fields that Word fills in can be added with the `field` method. It accepts `:page` (the current page number) and `:numpages` (the total number of pages), along with the same formatting options as `text`.
+
+```ruby
+docx.p do
+  text 'Page '
+  field :page, bold: true
+  text ' of '
+  field :numpages
+end
+```
 
 ### Links
 
@@ -509,7 +538,7 @@ docx.hr do
   color   '333333'   # sets the color of the line. defaults to auto.
   line    :double    # sets the line style (single or double). defaults to single.
   size    8          # sets the thickness of the line. units in 1/8 points. defaults to 4.
-  spacing 4          # sets the spacing around the line. units in 1/8 points. defaults to 1.
+  spacing 4          # sets the space between the line and the surrounding text. units in points. defaults to 1.
 end
 ```
 
@@ -565,7 +594,7 @@ docx.ul do
 end
 ```
 
-Lists can nested as many levels deep as you wish and mixed in any combination.
+Lists can be nested as many levels deep as you wish and mixed in any combination. An item can contain more than one nested list. Text that follows a nested list renders after it, as an unnumbered paragraph aligned with the item's text.
 
 ```ruby
 docx.ul do
@@ -614,6 +643,7 @@ Images can be added by using the `img` method.  The method accepts several optio
 ```ruby
 docx.img 'https://www.example.com/logo.png' do
   data    raw_data  # sets the file data directly instead of opening the url
+  ppi     72        # sets the pixels per inch used to convert width and height. defaults to 72.
   width   396       # sets the image width. units specified in pixels.
   height  216       # sets the image height. units specified in pixels.
   align   :right    # controls the justification of the image. default is :left.
@@ -623,6 +653,16 @@ docx.img 'https://www.example.com/logo.png' do
   right   10        # sets the right margin. units specified in pixels.
 end
 ```
+
+Every setting can also be passed as an option instead of in a block:
+
+```ruby
+docx.img 'logo.png', data: File.binread('path/to/logo.png'), width: 396, height: 216
+```
+
+*Note: `data` must be the raw bytes of the image, not Base64. Caracal writes it
+into the document unchanged, so Base64-encoded data produces a corrupt image.
+Read files with `File.binread` so line endings are not translated on Windows.*
 
 *Note: If you provide the image data, you should still supply a URL. I know this
 is a bit hacky, but it allows the library to key the image more effectively and
@@ -691,6 +731,31 @@ end
 ```
 
 *Note: content of cells 21 and 24 will disappear*
+
+Table rows can be marked as header rows using the `header_rows` method which takes a number indicating how many rows from the top of the table should be marked as such. This has the effect of repeating these rows after each page break.
+
+```ruby
+docx.table [['Header 1', 'Header 2'],['Cell 1', 'Cell 2']] do
+  header_rows 1   # same as repeat_header 1
+end
+```
+
+Row can be marked as can't split rows that re-position themselves at the top of the next if they would have otherwise split across a page break.
+
+```
+docx.table [['11', '22'], ['14', '25'], ['64', '23']] do
+  cant_split rows[1]
+end
+```
+
+or
+
+```
+docx.table [['11', '22'], ['14', '25'], ['64', '23']] do
+  cant_split rows[1...-1]
+end
+```
+
 
 ### Table Cells
 
@@ -944,7 +1009,7 @@ EOXML
 
 Caracal includes [Tilt](https://github.com/rtomayko/tilt) integration to facilitate its inclusion in other frameworks.
 
-Rails integration can be added via the [Caracal-Rails](https://github.com/trade-informatics/caracal-rails) gem.
+Rails integration can be added via the [Caracal-Rails](https://github.com/urvin-compliance/caracal-rails) gem.
 
 
 ## Using Variables
@@ -1000,7 +1065,7 @@ happy to answer questions and provide what guidance we can. We just won't write 
 
 For those using reasonably current versions of Word, please consider the following:
 
-- Before you file an issue, please run the example Caracal project [caracal-example](https://github.com/trade-informatics/caracal-example) in your development environment and
+- Before you file an issue, please run the example Caracal project [caracal-example](https://github.com/urvin-compliance/caracal-example) in your development environment and
 check the output.  This project implements nearly every feature Caracal supports and renders the expected output
 correctly.  It can be thought of as a canonical implementation of the library.
 
@@ -1029,7 +1094,7 @@ for 2010/2013, a set for 2016, etc.).
 
 ## Contributing
 
-1. Fork it ( https://github.com/trade-informatics/caracal/fork )
+1. Fork it ( https://github.com/urvin-compliance/caracal/fork )
 2. Create your feature branch (`git checkout -b my-new-feature`)
 3. Commit your changes (`git commit -am 'Add some feature'`)
 4. Push to the branch (`git push origin my-new-feature`)
@@ -1048,6 +1113,6 @@ A tip of the hat to the wonderful PDF generation library [Prawn](https://github.
 
 ## License
 
-Copyright (c) 2014 Trade Informatics, Inc
+Copyright (c) 2014 Urvin LLC
 
-[MIT License](https://github.com/trade-informatics/caracal/blob/master/LICENSE.txt)
+[MIT License](https://github.com/urvin-compliance/caracal/blob/master/LICENSE.txt)

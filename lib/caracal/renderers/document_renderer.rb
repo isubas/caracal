@@ -37,6 +37,7 @@ module Caracal
 
                 w.pgSz page_size_options
                 w.pgMar page_margin_options
+                w.pgNumType 'w:start' => document.page_number_start unless document.page_number_start.nil?
 
                 # FIXME: dirty hack to let word create a blank header for the first page which is the cover
                 # w.titlePg
@@ -78,7 +79,7 @@ module Caracal
       def render_iframe(xml, model, **options)
         ::Zip::File.open(model.file) do |zip|
           entry    = zip.glob('word/document.xml').first
-          content  = entry.get_input_stream.read
+          content  = Caracal::Core::Models::IFrameModel.read_entry(entry)
           doc_xml  = Nokogiri::XML(content)
           ns       = document.namespaces
           fragment = doc_xml.xpath('//w:body').first.children
@@ -297,7 +298,7 @@ module Caracal
         w.hyperlink(hyperlink_options) do
           w.r run_options do
             render_run_attributes xml, model, skip_empty: true
-            w.t({ 'xml:space' => 'preserve' }, model.link_content)
+            w.t({ 'xml:space' => 'preserve' }, xml_safe(model.link_content))
           end
         end
       end
@@ -322,16 +323,23 @@ module Caracal
           w.pPr do
             w.pStyle 'w:val' => model.paragraph_style || 'Normal'
             w.keepNext if model.paragraph_keep_next == true
-            w.numPr do
-              w.ilvl 'w:val' => model.list_item_level
-              w.numId 'w:val' => list_num
+            unless model.continuation?
+              w.numPr do
+                w.ilvl 'w:val' => model.list_item_level
+                w.numId 'w:val' => list_num
+              end
             end
             render_borders    w, model, 'pBdr', :paragraph
             render_background w, model, :paragraph
             render_tabs       w, model, model.paragraph_tabs if model.paragraph_tabs&.any?
             spacing = spacing_options model
             w.spacing spacing unless spacing.nil?
-            w.ind 'w:start' => ls.style_left, 'w:hanging' => hanging
+            if model.continuation?
+              # text after a nested list: no number, aligned with the item's text
+              w.ind 'w:start' => ls.style_left
+            else
+              w.ind 'w:start' => ls.style_left, 'w:hanging' => hanging
+            end
             w.contextualSpacing 'w:val' => true
             render_run_attributes w, model, skip_empty: true
           end
@@ -402,7 +410,7 @@ module Caracal
           render_run_attributes(xml, model, skip_empty: true)
           opts = {}
           opts['xml:space'] = model.text_whitespace || 'preserve'
-          w.t opts, model.text_content
+          w.t opts, xml_safe(model.text_content)
           w.tab if model.text_end_tab
         end
       end
@@ -476,6 +484,7 @@ module Caracal
                 if model.table_repeat_header > 0 and index < model.table_repeat_header
                   w.tblHeader
                 end
+                w.cantSplit if model.cant_split?(index)
                 # w.cantSplit # to not split table cells across pages
                 w.trHeight 'w:hRule' => 'auto'
                 # w.tblCellSpacing 'w:w' => 0, 'w:type' => 'dxa'

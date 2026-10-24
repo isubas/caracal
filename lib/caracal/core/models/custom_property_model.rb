@@ -17,7 +17,7 @@ module Caracal
 
         def valid?
           required = option_keys
-          required.all? {|m| validate_presenc m }
+          required.all? {|m| validate_presence m }
         end
 
         private

@@ -7,6 +7,7 @@ Gem::Specification.new do |s|
 
   s.required_rubygems_version = Gem::Requirement.new(">= 0".freeze) if s.respond_to? :required_rubygems_version=
   s.require_paths = ["lib".freeze]
+  s.required_ruby_version = Gem::Requirement.new(">= 3.1".freeze)
   s.authors = ["Trade Infomatics".freeze, "John Dugan".freeze, "Sprengnetter Real Estate", "Willem van Kerkhof", "Kuba Kuzma"]
   s.date = "2022-01-26"
   s.description = " Caracal is a pure Ruby Microsoft Word generation library that produces professional quality MSWord documents (docx) using a simple, HTML-style DSL. ".freeze
@@ -30,8 +31,8 @@ Gem::Specification.new do |s|
       # fixes deprecation, ostruct will be removed from ruby 3.4
       s.add_runtime_dependency(%q<ostruct>.freeze, ["~> 0.6"])
     end
-    s.add_runtime_dependency(%q<nokogiri>.freeze, ["~> 1.6"])
-    s.add_runtime_dependency(%q<rubyzip>.freeze, [">= 1.1.0", "< 4.0"])
+    s.add_runtime_dependency(%q<nokogiri>.freeze, [">= 1.16.2", "< 2.0"])
+    s.add_runtime_dependency(%q<rubyzip>.freeze, [">= 1.1.6", "< 4.0"])
     s.add_runtime_dependency(%q<tilt>.freeze, [">= 1.4"])
     s.add_development_dependency(%q<bundler>.freeze, [">= 2.0"])
     s.add_development_dependency(%q<rake>.freeze, ["~> 13.0"])
@@ -41,8 +42,8 @@ Gem::Specification.new do |s|
       # fixes deprecation, ostruct will be removed from ruby 3.4
       s.add_dependency(%q<ostruct>.freeze, ["~> 0.6"])
     end
-    s.add_dependency(%q<nokogiri>.freeze, ["~> 1.6"])
-    s.add_dependency(%q<rubyzip>.freeze, [">= 1.1.0", "< 4.0"])
+    s.add_dependency(%q<nokogiri>.freeze, [">= 1.16.2", "< 2.0"])
+    s.add_dependency(%q<rubyzip>.freeze, [">= 1.1.6", "< 4.0"])
     s.add_dependency(%q<zip-zip>.freeze, [">= 1.0.0"])
     s.add_dependency(%q<tilt>.freeze, [">= 1.4"])
     s.add_dependency(%q<bundler>.freeze, [">= 2.0"])

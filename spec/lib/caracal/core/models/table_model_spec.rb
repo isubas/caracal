@@ -181,6 +181,24 @@ describe Caracal::Core::Models::TableModel do
       it { expect(subject.table_width).to eq 7500 }
     end
 
+    # .header_rows
+    describe '.header_rows' do
+      before { subject.header_rows(2) }
+
+      it { expect(subject.table_repeat_header).to eq 2 }
+    end
+
+    # .cant_split
+    describe '.cant_split' do
+      before do
+        subject.data([['a'], ['b'], ['c']])
+        subject.cant_split(subject.rows[1])
+      end
+
+      it { expect(subject.cant_split?(0)).to eq false }
+      it { expect(subject.cant_split?(1)).to eq true }
+    end
+
     # .repeat_header
     describe '.repeat_header' do
       before { subject.repeat_header(2) }
@@ -218,7 +236,7 @@ describe Caracal::Core::Models::TableModel do
     # .option_keys
     describe '.option_keys' do
       let(:actual)     { subject.send(:option_keys).sort }
-      let(:expected)  { [:data, :align, :width, :column_widths, :border_color, :border_line, :border_size, :border_spacing, :border_top, :border_bottom, :border_left, :border_right, :border_horizontal, :border_vertical, :repeat_header, :bgcolor, :bgstyle, :border, :border_theme_color, :caption, :col_band_size, :indent, :layout, :row_band_size, :style, :theme_bgcolor].sort }
+      let(:expected)  { [:data, :align, :width, :column_widths, :border_color, :border_line, :border_size, :border_spacing, :border_top, :border_bottom, :border_left, :border_right, :border_horizontal, :border_vertical, :header_rows, :repeat_header, :bgcolor, :bgstyle, :border, :border_theme_color, :caption, :col_band_size, :indent, :layout, :row_band_size, :style, :theme_bgcolor].sort }
 
       it { expect(actual).to eq expected }
     end

@@ -46,13 +46,7 @@ module Caracal
         # This method returns a flattened array containing every
         # item within this list's tree.
         def recursive_items
-          items.map do |model|
-            if model.nested_list.nil?
-              model
-            else
-              [model, model.nested_list.recursive_items]
-            end
-          end.flatten
+          items.flat_map(&:recursive_items)
         end
 
         #=============== SUB-METHODS ===========================
